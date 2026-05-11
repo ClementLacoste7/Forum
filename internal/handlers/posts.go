@@ -77,3 +77,26 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
 }
+func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uint)
+	if !ok || userID == 0 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	var post models.Post
+	if err := h.DB.First(&post, id).Error; err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	// Only the author can delete
+	if post.UserID != userID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	h.DB.Delete(&post)
+	w.WriteHeader(http.StatusNoContent)
+}
