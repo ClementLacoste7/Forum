@@ -1,19 +1,22 @@
-<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Forum</title>
+  <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css" />
   <link rel="stylesheet" href="/assets/css/style.css" />
 </head>
 <body>
   <div id="app">
-    <nav id="navbar"></nav>
+    <nav id="navbar">
+      <div class="nav-logo">Forum</div>
+      <div class="nav-links" id="nav-links"></div>
+    </nav>
     <main id="main-content"></main>
   </div>
 
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
   <script type="module" src="/js/api.js"></script>
-  <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/router.js"></script>
 </body>
 </html>
