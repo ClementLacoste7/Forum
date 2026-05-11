@@ -80,3 +80,32 @@ export async function renderPost(id) {
     document.getElementById("main-content").innerHTML = "<p>Post introuvable.</p>"
   }
 }
+// Render new post form with rich text editor
+export async function renderNewPost() {
+  if (!localStorage.getItem("access_token")) return navigate("/login")
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="new-post-form">
+      <h2>Nouveau post</h2>
+      <input id="post-title" type="text" placeholder="Titre" />
+      <div id="editor-container"></div>
+      <button id="post-submit">Publier</button>
+    </div>
+  `
+
+  initEditor("editor-container")
+
+  document.getElementById("post-submit").addEventListener("click", async () => {
+    const title = document.getElementById("post-title").value
+    const content = getEditorContent()
+
+    if (!title.trim() || !content.trim()) return alert("Titre et contenu requis")
+
+    try {
+      await api.post("/posts", { title, content })
+      navigate("/")
+    } catch (err) {
+      alert(err.message || "Erreur")
+    }
+  })
+}
