@@ -5,15 +5,15 @@ export async function renderAuth() {
   const path = window.location.pathname
   const isLogin = path === "/login"
 
-  document.getElementById("main-content").innerHTML = 
+  document.getElementById("main-content").innerHTML = `
     <div class="auth-form">
       <h2>${isLogin ? "Connexion" : "Inscription"}</h2>
       <input id="email" type="email" placeholder="Email" />
-      ${!isLogin ? <input id="username" type="text" placeholder="Pseudo" /> : ""}
+      ${!isLogin ? `<input id="username" type="text" placeholder="Pseudo" />` : ""}
       <input id="password" type="password" placeholder="Mot de passe" />
       <button id="submit-btn">${isLogin ? "Se connecter" : "S'inscrire"}</button>
     </div>
-  
+  `
 
   document.getElementById("submit-btn").addEventListener("click", async () => {
     const email = document.getElementById("email").value
@@ -34,4 +34,3 @@ export async function renderAuth() {
     }
   })
 }
-

@@ -7,7 +7,7 @@ function getToken() {
 async function request(method, endpoint, body = null) {
   const headers = { "Content-Type": "application/json" }
   const token = getToken()
-  if (token) headers["Authorization"] = Bearer ${token}
+  if (token) headers["Authorization"] = `Bearer ${token}`
 
   const res = await fetch(BASE_URL + endpoint, {
     method,

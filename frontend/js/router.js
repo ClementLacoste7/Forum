@@ -20,5 +20,6 @@ function render(path) {
   fn()
 }
 
+window.navigate = navigate
 window.addEventListener("popstate", () => render(window.location.pathname))
-document.addEventListener("DOMContentLoaded", () => render(window.location.pathname))
+render(window.location.pathname)

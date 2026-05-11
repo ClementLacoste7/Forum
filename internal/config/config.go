@@ -8,7 +8,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Port:         ":8080",
+		Port:         ":8081",
 		DatabasePath: "./forum.db",
 		JWTSecret:    "change-me-in-production",
 	}
