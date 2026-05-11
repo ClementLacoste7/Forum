@@ -31,3 +31,46 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(comment)
 }
+func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
+	postID := r.URL.Query().Get("post_id")
+	if postID == "" {
+		http.Error(w, "missing post_id", http.StatusBadRequest)
+		return
+	}
+
+	var comments []models.Comment
+	h.DB.Preload("User").Where("post_id = ?", postID).Find(&comments)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(comments)
+}
+
+func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uint)
+	if !ok || userID == 0 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var body struct {
+		CommentID uint `json:"comment_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	var comment models.Comment
+	if err := h.DB.First(&comment, body.CommentID).Error; err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	// Only the author can delete
+	if comment.UserID != userID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	h.DB.Delete(&comment)
+	w.WriteHeader(http.StatusNoContent)
+}
