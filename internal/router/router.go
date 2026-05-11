@@ -24,10 +24,32 @@ func New(db *gorm.DB) http.Handler {
 
 	// Posts (mixte)
 	mux.HandleFunc("/api/posts", middleware.OptionalAuth(h.GetPosts, h.CreatePost))
-	mux.HandleFunc("/api/posts/", middleware.OptionalAuth(h.GetPost, h.UpdatePost))
+	mux.HandleFunc("/api/posts/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetPost(w, r)
+		case http.MethodPut:
+			middleware.RequireAuth(h.UpdatePost)(w, r)
+		case http.MethodDelete:
+			middleware.RequireAuth(h.DeletePost)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
-	// Comments (protégé)
-	mux.HandleFunc("/api/comments", middleware.RequireAuth(h.CreateComment))
+	// Comments
+	mux.HandleFunc("/api/comments", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetComments(w, r)
+		case http.MethodPost:
+			middleware.RequireAuth(h.CreateComment)(w, r)
+		case http.MethodDelete:
+			middleware.RequireAuth(h.DeleteComment)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Likes (protégé)
 	mux.HandleFunc("/api/likes", middleware.RequireAuth(h.ToggleLike))
