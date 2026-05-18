@@ -221,3 +221,38 @@ body {
   border-radius: 6px;
   cursor: pointer;
 }
+
+/* Profile */
+.profile-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.profile-info {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.profile-list {
+  list-style: none;
+  margin-bottom: 1.5rem;
+}
+
+.profile-list-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+#logout-btn {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
