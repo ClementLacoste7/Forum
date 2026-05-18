@@ -57,5 +57,5 @@ func New(db *gorm.DB) http.Handler {
 	// Profile (protégé)
 	mux.HandleFunc("/api/profile", middleware.RequireAuth(h.GetProfile))
 
-	return mux
+	return middleware.CORS(mux)
 }
