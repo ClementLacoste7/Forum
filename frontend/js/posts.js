@@ -1,6 +1,7 @@
 import { api } from "./api.js"
 import { navigate } from "./router.js"
 import { initEditor, getEditorContent } from "./editor.js"
+import { renderComments } from "./comments.js"
 
 // Render list of all posts on home page
 export async function renderHome() {
@@ -43,7 +44,7 @@ export async function renderHome() {
   }
 }
 
-// Render single post with likes
+// Render single post with likes and comments
 export async function renderPost(id) {
   document.getElementById("main-content").innerHTML = "<p>Chargement...</p>"
 
@@ -57,8 +58,8 @@ export async function renderPost(id) {
         <p class="post-meta">Par ${post.User?.Username || "Inconnu"}</p>
         <div class="post-content">${post.Content}</div>
         <div class="likes-section">
-          <button class="like-btn" data-like="true">Like</button>
-          <button class="like-btn" data-like="false">Dislike</button>
+          <button class="like-btn" data-like="true">👍 Like</button>
+          <button class="like-btn" data-like="false">👎 Dislike</button>
         </div>
         <div id="comments-section"></div>
       </div>
@@ -76,10 +77,14 @@ export async function renderPost(id) {
       })
     })
 
+    // Load comments section
+    renderComments(post.ID)
+
   } catch (err) {
     document.getElementById("main-content").innerHTML = "<p>Post introuvable.</p>"
   }
 }
+
 // Render new post form with rich text editor
 export async function renderNewPost() {
   if (!localStorage.getItem("access_token")) return navigate("/login")
