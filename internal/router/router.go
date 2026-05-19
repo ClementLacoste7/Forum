@@ -2,6 +2,8 @@ package router
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
@@ -13,25 +15,16 @@ func New(db *gorm.DB) http.Handler {
 	h := handlers.New(db)
 	mux := http.NewServeMux()
 
-	// SPA fallback routes
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./frontend/index.html")
+	// Static frontend + SPA fallback
+	fileServer := http.FileServer(http.Dir("./frontend"))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fullPath := filepath.Join("frontend", r.URL.Path[1:])
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			http.ServeFile(w, r, "frontend/index.html")
+			return
+		}
+		fileServer.ServeHTTP(w, r)
 	})
-	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./frontend/index.html")
-	})
-	mux.HandleFunc("/profile", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./frontend/index.html")
-	})
-	mux.HandleFunc("/new-post", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./frontend/index.html")
-	})
-	mux.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./frontend/index.html")
-	})
-
-	// Static frontend
-	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Auth (public)
