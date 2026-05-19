@@ -42,7 +42,7 @@ async function request(method, endpoint, body = null, retry = true) {
   })
 
   // If unauthorized and we haven't retried yet, refresh token and retry
-  if (res.status === 401 && retry) {
+  if (res.status === 401 && retry && token) {
     try {
       await refreshAccessToken()
       return request(method, endpoint, body, false)
@@ -52,7 +52,13 @@ async function request(method, endpoint, body = null, retry = true) {
     }
   }
 
-  if (!res.ok) throw await res.json()
+  if (!res.ok) {
+    try {
+      throw await res.json()
+    } catch {
+      throw new Error(await res.text())
+    }
+  }
   return res.json()
 }
 
