@@ -13,6 +13,23 @@ func New(db *gorm.DB) http.Handler {
 	h := handlers.New(db)
 	mux := http.NewServeMux()
 
+	// SPA fallback routes
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/index.html")
+	})
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/index.html")
+	})
+	mux.HandleFunc("/profile", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/index.html")
+	})
+	mux.HandleFunc("/new-post", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/index.html")
+	})
+	mux.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/index.html")
+	})
+
 	// Static frontend
 	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
