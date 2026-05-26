@@ -14,52 +14,68 @@ export async function renderProfile() {
 
   try {
     const data = await api.get("/profile")
-
-    document.getElementById("profile-data").innerHTML = `
-      <div class="profile-info">
-        <p><strong>Pseudo :</strong> ${data.user.Username}</p>
-        <p><strong>Email :</strong> ${data.user.Email}</p>
-      </div>
-
-      <h3>Mes posts (${data.posts?.length || 0})</h3>
-      <ul class="profile-list">
-        ${data.posts?.length ? data.posts.map(p => `
-          <li class="profile-list-item">
-            <span class="profile-post-title" data-id="${p.ID}">${p.Title}</span>
-          </li>
-        `).join("") : "<li>Aucun post</li>"}
-      </ul>
-
-      <h3>Mes commentaires (${data.comments?.length || 0})</h3>
-      <ul class="profile-list">
-        ${data.comments?.length ? data.comments.map(c => `
-          <li class="profile-list-item">${c.Content}</li>
-        `).join("") : "<li>Aucun commentaire</li>"}
-      </ul>
-
-      <h3>Mes likes (${data.likes?.length || 0})</h3>
-      <ul class="profile-list">
-        ${data.likes?.length ? data.likes.map(l => `
-          <li class="profile-list-item">${l.IsLike ? "👍" : "👎"} Post #${l.PostID}</li>
-        `).join("") : "<li>Aucun like</li>"}
-      </ul>
-
-      <button id="logout-btn">Se déconnecter</button>
-    `
-
-    // Navigate to post on click
-    document.querySelectorAll(".profile-post-title").forEach(el => {
-      el.style.cursor = "pointer"
-      el.style.color = "#1a1a2e"
-      el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
-    })
-
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      localStorage.removeItem("access_token")
-      navigate("/")
-    })
-
+    renderProfileData(data)
   } catch (err) {
     document.getElementById("profile-data").innerHTML = "<p>Erreur de chargement.</p>"
   }
+}
+
+async function renderProfileData(data) {
+  document.getElementById("profile-data").innerHTML = `
+    <div class="profile-info">
+      <p><strong>Pseudo :</strong> ${data.user.Username}</p>
+      <p><strong>Email :</strong> ${data.user.Email}</p>
+    </div>
+
+    <h3>Mes posts (${data.posts?.length || 0})</h3>
+    <ul class="profile-list" id="profile-posts">
+      ${data.posts?.length ? data.posts.map(p => `
+        <li class="profile-list-item">
+          <span class="profile-post-title" data-id="${p.ID}">${p.Title}</span>
+          <button class="btn-delete-post" data-id="${p.ID}">Supprimer</button>
+        </li>
+      `).join("") : "<li>Aucun post</li>"}
+    </ul>
+
+    <h3>Mes commentaires (${data.comments?.length || 0})</h3>
+    <ul class="profile-list">
+      ${data.comments?.length ? data.comments.map(c => `
+        <li class="profile-list-item">${c.Content}</li>
+      `).join("") : "<li>Aucun commentaire</li>"}
+    </ul>
+
+    <h3>Mes likes (${data.likes?.length || 0})</h3>
+    <ul class="profile-list">
+      ${data.likes?.length ? data.likes.map(l => `
+        <li class="profile-list-item">${l.IsLike ? "Like" : "Dislike"} — Post #${l.PostID}</li>
+      `).join("") : "<li>Aucun like</li>"}
+    </ul>
+
+    <button id="logout-btn">Se déconnecter</button>
+  `
+
+  // Navigate to post on click
+  document.querySelectorAll(".profile-post-title").forEach(el => {
+    el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
+  })
+
+  // Delete post
+  document.querySelectorAll(".btn-delete-post").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Supprimer ce post ?")) return
+      try {
+        await api.delete(`/posts/${btn.dataset.id}`)
+        const data = await api.get("/profile")
+        renderProfileData(data)
+      } catch (err) {
+        alert("Erreur lors de la suppression")
+      }
+    })
+  })
+
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("refresh_token")
+    navigate("/")
+  })
 }
