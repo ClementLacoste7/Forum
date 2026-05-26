@@ -248,7 +248,16 @@ body {
   cursor: pointer;
   font-size: 0.85rem;
 }
-
+.btn-delete-post {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-left: 1rem;
+}
 .category-checkbox input { accent-color: #1a1a2e; }
 
 .tag {
