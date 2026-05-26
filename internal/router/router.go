@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
@@ -18,6 +19,11 @@ func New(db *gorm.DB) http.Handler {
 	// Static frontend + SPA fallback
 	fileServer := http.FileServer(http.Dir("./frontend"))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Never intercept API routes
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			http.NotFound(w, r)
+			return
+		}
 		fullPath := filepath.Join("frontend", r.URL.Path[1:])
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			http.ServeFile(w, r, "frontend/index.html")
