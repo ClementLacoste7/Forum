@@ -41,7 +41,6 @@ async function request(method, endpoint, body = null, retry = true) {
     body: body ? JSON.stringify(body) : null,
   })
 
-  // If unauthorized and we haven't retried yet, refresh token and retry
   if (res.status === 401 && retry && token) {
     try {
       await refreshAccessToken()
@@ -59,6 +58,10 @@ async function request(method, endpoint, body = null, retry = true) {
       throw new Error(await res.text())
     }
   }
+
+  // No content, nothing to parse
+  if (res.status === 204) return null
+
   return res.json()
 }
 
