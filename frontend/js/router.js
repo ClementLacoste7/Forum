@@ -2,18 +2,17 @@ import { renderHome, renderPost, renderNewPost } from "./posts.js"
 import { renderProfile } from "./profile.js"
 import { renderAuth } from "./auth.js"
 
-// Update navbar based on auth state
 function renderNavbar() {
   const token = localStorage.getItem("access_token")
   const nav = document.getElementById("nav-links")
 
   nav.innerHTML = token ? `
-    <a href="/" onclick="return false;" id="nav-home">Accueil</a>
-    <a href="/profile" onclick="return false;" id="nav-profile">Mon profil</a>
+    <a id="nav-home">Accueil</a>
+    <a id="nav-profile">Mon profil</a>
     <button id="nav-logout">Déconnexion</button>
   ` : `
-    <a href="/login" onclick="return false;" id="nav-login">Connexion</a>
-    <a href="/register" onclick="return false;" id="nav-register">Inscription</a>
+    <a id="nav-login">Connexion</a>
+    <a id="nav-register">Inscription</a>
   `
 
   document.getElementById("nav-home")?.addEventListener("click", () => navigate("/"))
@@ -22,14 +21,43 @@ function renderNavbar() {
   document.getElementById("nav-register")?.addEventListener("click", () => navigate("/register"))
   document.getElementById("nav-logout")?.addEventListener("click", () => {
     localStorage.removeItem("access_token")
+    localStorage.removeItem("refresh_token")
     navigate("/")
   })
 
-  // Logo click
-  document.querySelector(".nav-logo").addEventListener("click", () => navigate("/"))
+  document.querySelector(".nav-logo")?.addEventListener("click", () => navigate("/"))
 }
 
-// Match dynamic routes like /post/123
+function renderSidebar() {
+  const token = localStorage.getItem("access_token")
+
+  // Left sidebar nav links
+  document.getElementById("link-home")?.addEventListener("click", () => navigate("/"))
+  document.getElementById("link-profile")?.addEventListener("click", () => {
+    if (token) navigate("/profile")
+    else navigate("/login")
+  })
+  document.getElementById("link-new-post")?.addEventListener("click", () => {
+    if (token) navigate("/new-post")
+    else navigate("/login")
+  })
+
+  // Right sidebar create post button
+  document.getElementById("sidebar-new-post")?.addEventListener("click", () => {
+    if (token) navigate("/new-post")
+    else navigate("/login")
+  })
+
+  // Category filters
+  document.querySelectorAll(".category-item").forEach(item => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".category-item").forEach(i => i.classList.remove("active"))
+      item.classList.add("active")
+      // TODO: filter posts by category
+    })
+  })
+}
+
 function matchRoute(path) {
   if (path.startsWith("/post/")) {
     const id = path.split("/")[2]
@@ -53,6 +81,7 @@ export function navigate(path) {
 
 function render(path) {
   renderNavbar()
+  renderSidebar()
   const fn = routes[path] || matchRoute(path) || renderHome
   document.getElementById("main-content").innerHTML = ""
   fn()
