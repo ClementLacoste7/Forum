@@ -8,6 +8,7 @@ export async function renderProfile() {
   document.getElementById("main-content").innerHTML = `
     <div class="profile-container">
       <h2>Mon profil</h2>
+      <div id="profile-error" class="error-msg"></div>
       <div id="profile-data">Chargement...</div>
     </div>
   `
@@ -54,22 +55,34 @@ async function renderProfileData(data) {
     <button id="logout-btn">Se déconnecter</button>
   `
 
-  // Navigate to post on click
   document.querySelectorAll(".profile-post-title").forEach(el => {
     el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
   })
 
-  // Delete post
   document.querySelectorAll(".btn-delete-post").forEach(btn => {
     btn.addEventListener("click", async () => {
-      if (!confirm("Supprimer ce post ?")) return
-      try {
-        await api.delete(`/posts/${btn.dataset.id}`)
+      // Show inline confirm
+      const li = btn.closest("li")
+      li.innerHTML = `
+        <span>Confirmer la suppression ?</span>
+        <button class="btn-confirm-delete" data-id="${btn.dataset.id}">Oui</button>
+        <button class="btn-cancel-delete">Annuler</button>
+      `
+
+      li.querySelector(".btn-cancel-delete").addEventListener("click", async () => {
         const data = await api.get("/profile")
         renderProfileData(data)
-      } catch (err) {
-        alert("Erreur lors de la suppression")
-      }
+      })
+
+      li.querySelector(".btn-confirm-delete").addEventListener("click", async () => {
+        try {
+          await api.delete(`/posts/${btn.dataset.id}`)
+          const data = await api.get("/profile")
+          renderProfileData(data)
+        } catch (err) {
+          document.getElementById("profile-error").textContent = "Erreur lors de la suppression."
+        }
+      })
     })
   })
 
