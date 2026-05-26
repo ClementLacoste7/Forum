@@ -3,21 +3,25 @@ import { navigate } from "./router.js"
 import { initEditor, getEditorContent } from "./editor.js"
 import { renderComments } from "./comments.js"
 
-// Format date
 function formatDate(dateStr) {
   const d = new Date(dateStr)
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
 }
 
-// Render list of all posts on home page
-export async function renderHome() {
+// Render list of posts, optionally filtered by category
+export async function renderHome(category = null) {
   document.getElementById("main-content").innerHTML = `<div id="posts-list">Chargement...</div>`
 
   try {
     const posts = await api.get("/posts")
     const list = document.getElementById("posts-list")
 
-    if (!posts.length) {
+    // Filter by category if one is selected
+    const filtered = category
+      ? posts.filter(p => p.Categories?.some(c => c.Name === category))
+      : posts
+
+    if (!filtered.length) {
       list.innerHTML = `
         <div class="empty-state">
           <p>Aucun post pour l'instant.</p>
@@ -28,7 +32,7 @@ export async function renderHome() {
       return
     }
 
-    list.innerHTML = posts.map(p => `
+    list.innerHTML = filtered.map(p => `
       <div class="post-card" data-id="${p.ID}">
         <div class="post-card-votes">
           <span class="vote-count">${p.Likes?.length || 0}</span>
@@ -57,7 +61,6 @@ export async function renderHome() {
   }
 }
 
-// Render single post with likes and comments
 export async function renderPost(id) {
   document.getElementById("main-content").innerHTML = "<p>Chargement...</p>"
 
@@ -105,15 +108,34 @@ export async function renderPost(id) {
   }
 }
 
-// Render new post form with rich text editor
+// Render new post form with category checkboxes
 export async function renderNewPost() {
   if (!localStorage.getItem("access_token")) return navigate("/login")
+
+  // Load categories from API
+  let categories = []
+  try {
+    categories = await api.get("/categories")
+  } catch (err) {
+    alert("Erreur chargement catégories")
+    return
+  }
 
   document.getElementById("main-content").innerHTML = `
     <div class="new-post-form">
       <h2>Nouveau post</h2>
       <input id="post-title" type="text" placeholder="Titre du post" />
-      <input id="post-categories" type="text" placeholder="Catégories (ex: Tech, Gaming)" />
+      <div class="categories-select">
+        <p class="categories-label">Catégories</p>
+        <div class="categories-checkboxes">
+          ${categories.map(c => `
+            <label class="category-checkbox">
+              <input type="checkbox" value="${c.Name}" />
+              ${c.Name}
+            </label>
+          `).join("")}
+        </div>
+      </div>
       <div id="editor-container"></div>
       <button class="btn-primary" id="post-submit">Publier</button>
     </div>
@@ -124,13 +146,14 @@ export async function renderNewPost() {
   document.getElementById("post-submit").addEventListener("click", async () => {
     const title = document.getElementById("post-title").value
     const content = getEditorContent()
-    const categories = document.getElementById("post-categories").value
-      .split(",").map(c => c.trim()).filter(Boolean)
+    const selected = [...document.querySelectorAll(".categories-checkboxes input:checked")]
+      .map(el => el.value)
 
     if (!title.trim() || !content.trim()) return alert("Titre et contenu requis")
+    if (!selected.length) return alert("Sélectionne au moins une catégorie")
 
     try {
-      await api.post("/posts", { title, content, categories })
+      await api.post("/posts", { title, content, categories: selected })
       navigate("/")
     } catch (err) {
       alert(err.message || "Erreur")
