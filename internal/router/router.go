@@ -2,6 +2,8 @@ package router
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"forum/internal/handlers"
 	"forum/internal/middleware"
@@ -13,8 +15,16 @@ func New(db *gorm.DB) http.Handler {
 	h := handlers.New(db)
 	mux := http.NewServeMux()
 
-	// Static frontend
-	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
+	// Static frontend + SPA fallback
+	fileServer := http.FileServer(http.Dir("./frontend"))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fullPath := filepath.Join("frontend", r.URL.Path[1:])
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			http.ServeFile(w, r, "frontend/index.html")
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Auth (public)
