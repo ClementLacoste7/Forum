@@ -11,7 +11,7 @@ import (
 
 func (h *Handler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	posts := []models.Post{}
-	h.DB.Preload("User").Preload("Categories").Find(&posts)
+	h.DB.Preload("User").Preload("Categories").Preload("Comments").Find(&posts)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
@@ -33,11 +33,14 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find or create categories
+	// Only allow existing categories
 	var categories []models.Category
 	for _, name := range body.Categories {
 		var cat models.Category
-		h.DB.FirstOrCreate(&cat, models.Category{Name: name})
+		if err := h.DB.Where("name = ?", name).First(&cat).Error; err != nil {
+			http.Error(w, "categorie invalide: "+name, http.StatusBadRequest)
+			return
+		}
 		categories = append(categories, cat)
 	}
 
@@ -89,13 +92,17 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewDecoder(r.Body).Decode(&body)
 
-	// Update categories
+	// Only allow existing categories
 	var categories []models.Category
 	for _, name := range body.Categories {
 		var cat models.Category
-		h.DB.FirstOrCreate(&cat, models.Category{Name: name})
+		if err := h.DB.Where("name = ?", name).First(&cat).Error; err != nil {
+			http.Error(w, "categorie invalide: "+name, http.StatusBadRequest)
+			return
+		}
 		categories = append(categories, cat)
 	}
+
 	h.DB.Model(&post).Association("Categories").Replace(categories)
 	h.DB.Model(&post).Updates(models.Post{Title: body.Title, Content: body.Content})
 
@@ -125,4 +132,11 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	h.DB.Delete(&post)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetCategories(w http.ResponseWriter, r *http.Request) {
+	var categories []models.Category
+	h.DB.Find(&categories)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(categories)
 }
