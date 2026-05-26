@@ -32,6 +32,9 @@ func New(db *gorm.DB) http.Handler {
 	mux.HandleFunc("/api/auth/login", h.Login)
 	mux.HandleFunc("/api/auth/refresh", h.Refresh)
 
+	// Categories (public)
+	mux.HandleFunc("/api/categories", h.GetCategories)
+
 	// Posts (mixte)
 	mux.HandleFunc("/api/posts", middleware.OptionalAuth(h.GetPosts, h.CreatePost))
 	mux.HandleFunc("/api/posts/", func(w http.ResponseWriter, r *http.Request) {
