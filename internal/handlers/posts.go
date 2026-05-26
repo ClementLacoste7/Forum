@@ -117,9 +117,10 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/posts/"))
+
 	var post models.Post
-	if err := h.DB.First(&post, id).Error; err != nil {
+	if err := h.DB.Where("id = ?", idStr).First(&post).Error; err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
