@@ -1,6 +1,9 @@
 import { renderHome, renderPost, renderNewPost } from "./posts.js"
 import { renderProfile } from "./profile.js"
 import { renderAuth } from "./auth.js"
+import { api } from "./api.js"
+
+let currentCategory = null
 
 function renderNavbar() {
   const token = localStorage.getItem("access_token")
@@ -28,10 +31,9 @@ function renderNavbar() {
   document.querySelector(".nav-logo")?.addEventListener("click", () => navigate("/"))
 }
 
-function renderSidebar() {
+async function renderSidebar() {
   const token = localStorage.getItem("access_token")
 
-  // Left sidebar nav links
   document.getElementById("link-home")?.addEventListener("click", () => navigate("/"))
   document.getElementById("link-profile")?.addEventListener("click", () => {
     if (token) navigate("/profile")
@@ -41,21 +43,33 @@ function renderSidebar() {
     if (token) navigate("/new-post")
     else navigate("/login")
   })
-
-  // Right sidebar create post button
   document.getElementById("sidebar-new-post")?.addEventListener("click", () => {
     if (token) navigate("/new-post")
     else navigate("/login")
   })
 
-  // Category filters
-  document.querySelectorAll(".category-item").forEach(item => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".category-item").forEach(i => i.classList.remove("active"))
-      item.classList.add("active")
-      // TODO: filter posts by category
+  // Load categories from API
+  try {
+    const categories = await api.get("/categories")
+    const list = document.getElementById("category-list")
+    if (!list) return
+
+    list.innerHTML = `<li class="category-item active" data-category="null">Tous les sujets</li>`
+      + categories.map(c => `
+        <li class="category-item" data-category="${c.Name}">${c.Name}</li>
+      `).join("")
+
+    list.querySelectorAll(".category-item").forEach(item => {
+      item.addEventListener("click", () => {
+        list.querySelectorAll(".category-item").forEach(i => i.classList.remove("active"))
+        item.classList.add("active")
+        currentCategory = item.dataset.category === "null" ? null : item.dataset.category
+        renderHome(currentCategory)
+      })
     })
-  })
+  } catch (err) {
+    console.error("Erreur chargement catégories", err)
+  }
 }
 
 function matchRoute(path) {
@@ -67,7 +81,7 @@ function matchRoute(path) {
 }
 
 const routes = {
-  "/":         renderHome,
+  "/":         () => renderHome(currentCategory),
   "/profile":  renderProfile,
   "/login":    renderAuth,
   "/register": renderAuth,
@@ -82,7 +96,7 @@ export function navigate(path) {
 function render(path) {
   renderNavbar()
   renderSidebar()
-  const fn = routes[path] || matchRoute(path) || renderHome
+  const fn = routes[path] || matchRoute(path) || (() => renderHome(currentCategory))
   document.getElementById("main-content").innerHTML = ""
   fn()
 }
