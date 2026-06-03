@@ -140,4 +140,16 @@ func (h *Handler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	h.DB.Find(&categories)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(categories)
+
+}
+func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
+	var postCount int64
+	var memberCount int64
+	h.DB.Model(&models.Post{}).Count(&postCount)
+	h.DB.Model(&models.User{}).Count(&memberCount)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int64{
+		"posts":   postCount,
+		"members": memberCount,
+	})
 }
