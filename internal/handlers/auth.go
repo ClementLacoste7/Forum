@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/gomail.v2"
 )
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +51,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "user created"})
 }
+
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -133,4 +137,103 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"access_token": accessToken,
 	})
+}
+
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if err := h.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
+		// Return ok even if user not found to avoid email enumeration
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "email sent if account exists"})
+		return
+	}
+
+	// Generate random reset token
+	tokenBytes := make([]byte, 16)
+	rand.Read(tokenBytes)
+	resetToken := hex.EncodeToString(tokenBytes)
+
+	// Store token with 1 hour expiry
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"reset_token":        resetToken,
+		"reset_token_expiry": time.Now().Add(1 * time.Hour),
+	})
+
+	// Send email
+	resetLink := h.Config.AppURL + "/reset-password?token=" + resetToken
+	m := gomail.NewMessage()
+	m.SetHeader("From", h.Config.SMTPUser)
+	m.SetHeader("To", user.Email)
+	m.SetHeader("Subject", "Réinitialisation de mot de passe")
+	m.SetBody("text/html", `
+		<p>Bonjour `+user.Username+`,</p>
+		<p>Cliquez sur ce lien pour réinitialiser votre mot de passe :</p>
+		<a href="`+resetLink+`">`+resetLink+`</a>
+		<p>Ce lien expire dans 1 heure.</p>
+	`)
+
+	d := gomail.NewDialer(h.Config.SMTPHost, h.Config.SMTPPort, h.Config.SMTPUser, h.Config.SMTPPassword)
+	if err := d.DialAndSend(m); err != nil {
+		http.Error(w, "error sending email", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"message": "email sent if account exists"})
+}
+
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if err := h.DB.Where("reset_token = ?", body.Token).First(&user).Error; err != nil {
+		http.Error(w, "invalid token", http.StatusBadRequest)
+		return
+	}
+
+	// Check token expiry
+	if time.Now().After(user.ResetTokenExpiry) {
+		http.Error(w, "token expired", http.StatusBadRequest)
+		return
+	}
+
+	// Hash new password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Update password and clear reset token
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"password":           string(hashed),
+		"reset_token":        "",
+		"reset_token_expiry": time.Time{},
+	})
+
+	json.NewEncoder(w).Encode(map[string]string{"message": "password updated"})
 }
