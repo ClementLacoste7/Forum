@@ -8,6 +8,19 @@ import (
 	"forum/internal/models"
 )
 
+func (h *Handler) GetLikes(w http.ResponseWriter, r *http.Request) {
+	postID := r.URL.Query().Get("post_id")
+	if postID == "" {
+		http.Error(w, "missing post_id", http.StatusBadRequest)
+		return
+	}
+
+	var likes []models.Like
+	h.DB.Where("post_id = ?", postID).Find(&likes)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(likes)
+}
+
 func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
