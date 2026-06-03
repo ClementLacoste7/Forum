@@ -19,7 +19,6 @@ func New(db *gorm.DB) http.Handler {
 	// Static frontend + SPA fallback
 	fileServer := http.FileServer(http.Dir("./frontend"))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Never intercept API routes
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			http.NotFound(w, r)
 			return
@@ -40,6 +39,9 @@ func New(db *gorm.DB) http.Handler {
 
 	// Categories (public)
 	mux.HandleFunc("/api/categories", h.GetCategories)
+
+	// Stats (public)
+	mux.HandleFunc("/api/stats", h.GetStats)
 
 	// Posts (mixte)
 	mux.HandleFunc("/api/posts", middleware.OptionalAuth(h.GetPosts, h.CreatePost))
