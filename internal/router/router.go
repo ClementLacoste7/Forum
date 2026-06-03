@@ -40,6 +40,9 @@ func New(db *gorm.DB) http.Handler {
 	// Categories (public)
 	mux.HandleFunc("/api/categories", h.GetCategories)
 
+	// Passwords
+	mux.HandleFunc("/api/auth/forgot-password", h.ForgotPassword)
+	mux.HandleFunc("/api/auth/reset-password", h.ResetPassword)
 	// Stats (public)
 	mux.HandleFunc("/api/stats", h.GetStats)
 
