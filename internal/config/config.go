@@ -18,8 +18,8 @@ func Load() *Config {
 		JWTSecret:    "change-me-in-production",
 		SMTPHost:     "smtp.gmail.com",
 		SMTPPort:     587,
-		SMTPUser:     "votre.email@gmail.com",
-		SMTPPassword: "votre-app-password",
+		SMTPUser:     "clement.lacoste64@gmail.com",
+		SMTPPassword: "bemh mdmm xhvl yamc",
 		AppURL:       "http://localhost:8081",
 	}
 }
