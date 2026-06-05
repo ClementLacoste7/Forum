@@ -1,7 +1,11 @@
 import { api } from "./api.js"
 import { navigate } from "./router.js"
 
-// Render comments for a given post
+function formatDate(dateStr) {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+}
+
 export async function renderComments(postID) {
   const container = document.getElementById("comments-section")
   container.innerHTML = "<p>Chargement des commentaires...</p>"
@@ -15,24 +19,25 @@ export async function renderComments(postID) {
       <ul class="comments-list">
         ${comments.length ? comments.map(c => `
           <li class="comment">
-            <strong>${c.User?.Username || "Inconnu"}</strong>
+            <div class="comment-meta">
+              <strong>${c.User?.Username || "Inconnu"}</strong>
+              <span class="comment-date">${formatDate(c.CreatedAt)}</span>
+            </div>
             <p>${c.Content}</p>
           </li>
-        `).join("") : "<li>Aucun commentaire.</li>"}
+        `).join("") : "<li class='comment'>Aucun commentaire.</li>"}
       </ul>
       ${isLoggedIn ? `
         <div class="add-comment">
           <textarea id="comment-input" placeholder="Ajouter un commentaire..."></textarea>
-          <button id="comment-submit">Envoyer</button>
+          <button class="btn-primary" id="comment-submit">Envoyer</button>
         </div>
       ` : `<p class="login-hint"><a id="login-link" href="/login">Connectez-vous</a> pour commenter.</p>`}
     `
 
-    // Handle comment submit
     document.getElementById("comment-submit")?.addEventListener("click", async () => {
       const content = document.getElementById("comment-input").value
       if (!content.trim()) return
-
       try {
         await api.post("/comments", { post_id: postID, content })
         renderComments(postID)
@@ -41,7 +46,6 @@ export async function renderComments(postID) {
       }
     })
 
-    // Handle login link click
     document.getElementById("login-link")?.addEventListener("click", (e) => {
       e.preventDefault()
       navigate("/login")
