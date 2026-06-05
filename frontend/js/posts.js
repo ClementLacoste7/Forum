@@ -8,7 +8,6 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
 }
 
-// Render list of posts, optionally filtered by category
 export async function renderHome(category = null) {
   document.getElementById("main-content").innerHTML = `<div id="posts-list">Chargement...</div>`
 
@@ -16,7 +15,6 @@ export async function renderHome(category = null) {
     const posts = await api.get("/posts")
     const list = document.getElementById("posts-list")
 
-    // Filter by category if one is selected
     const filtered = category
       ? posts.filter(p => p.Categories?.some(c => c.Name === category))
       : posts
@@ -39,7 +37,7 @@ export async function renderHome(category = null) {
         </div>
         <div class="post-card-body">
           <div class="post-card-tags">
-            ${p.Categories?.map(c => `<span class="tag">${c.Name}</span>`).join("") || ""}
+            ${p.Categories?.map(c => `<span class="tag" data-category="${c.Name}">${c.Name}</span>`).join("") || ""}
           </div>
           <h3 class="post-card-title" data-id="${p.ID}">${p.Title}</h3>
           <p class="post-card-preview">${p.Content.replace(/<[^>]*>/g, "").substring(0, 150)}...</p>
@@ -56,6 +54,12 @@ export async function renderHome(category = null) {
       el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
     })
 
+    // Filter by tag click on post card
+    document.querySelectorAll(".post-card-tags .tag").forEach(tag => {
+      tag.style.cursor = "pointer"
+      tag.addEventListener("click", () => renderHome(tag.dataset.category))
+    })
+
   } catch (err) {
     document.getElementById("main-content").innerHTML = "<p>Erreur de chargement.</p>"
   }
@@ -66,6 +70,15 @@ export async function renderPost(id) {
 
   try {
     const post = await api.get(`/posts/${id}`)
+
+    // Fetch likes count
+    let likeCount = 0
+    let dislikeCount = 0
+    try {
+      const likes = await api.get(`/likes?post_id=${post.ID}`)
+      likeCount = likes.filter(l => l.IsLike).length
+      dislikeCount = likes.filter(l => !l.IsLike).length
+    } catch {}
 
     document.getElementById("main-content").innerHTML = `
       <div class="post-full">
@@ -82,8 +95,8 @@ export async function renderPost(id) {
         </div>
         <div class="post-content">${post.Content}</div>
         <div class="likes-section">
-          <button class="like-btn" data-like="true">👍 Like</button>
-          <button class="like-btn" data-like="false">👎 Dislike</button>
+          <button class="like-btn" data-like="true">Like <span id="like-count">${likeCount}</span></button>
+          <button class="like-btn" data-like="false">Dislike <span id="dislike-count">${dislikeCount}</span></button>
         </div>
         <div id="comments-section"></div>
       </div>
@@ -93,11 +106,13 @@ export async function renderPost(id) {
 
     document.querySelectorAll(".like-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
+        if (!localStorage.getItem("access_token")) return navigate("/login")
         try {
           await api.post("/likes", { post_id: post.ID, is_like: btn.dataset.like === "true" })
-        } catch {
-          if (!localStorage.getItem("access_token")) navigate("/login")
-        }
+          const likes = await api.get(`/likes?post_id=${post.ID}`)
+          document.getElementById("like-count").textContent = likes.filter(l => l.IsLike).length
+          document.getElementById("dislike-count").textContent = likes.filter(l => !l.IsLike).length
+        } catch {}
       })
     })
 
@@ -108,11 +123,9 @@ export async function renderPost(id) {
   }
 }
 
-// Render new post form with category checkboxes
 export async function renderNewPost() {
   if (!localStorage.getItem("access_token")) return navigate("/login")
 
-  // Load categories from API
   let categories = []
   try {
     categories = await api.get("/categories")
