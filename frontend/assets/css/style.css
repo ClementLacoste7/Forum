@@ -24,11 +24,11 @@ body {
 }
 
 .nav-logo {
-  font-size: 1.3rem;
-  font-weight: bold;
+  height: 45px;
   cursor: pointer;
-  white-space: nowrap;
+  object-fit: contain;
 }
+
 
 .nav-search {
   flex: 1;
