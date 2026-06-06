@@ -81,12 +81,14 @@ function matchRoute(path) {
 }
 
 const routes = {
-  "/":         () => renderHome(currentCategory),
-  "/profile":  renderProfile,
-  "/login":    renderAuth,
-  "/register": renderAuth,
-  "/new-post": renderNewPost,
-}
+  "/":                renderHome,
+  "/profile":         renderProfile,
+  "/login":           renderAuth,
+  "/register":        renderAuth,
+  "/new-post":        renderNewPost,
+  "/forgot-password": renderAuth,
+  "/reset-password":  renderAuth,
+}                             
 
 export function navigate(path) {
   window.history.pushState({}, "", path)
@@ -103,3 +105,5 @@ function render(path) {
 
 window.addEventListener("popstate", () => render(window.location.pathname))
 document.addEventListener("DOMContentLoaded", () => render(window.location.pathname))
+
+           

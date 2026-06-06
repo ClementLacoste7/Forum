@@ -83,3 +83,10 @@ func New(db *gorm.DB) http.Handler {
 
 	return middleware.CORS(mux)
 }
+
+ mux.HandleFunc("/forgot-password", func(w http.ResponseWriter, r *http.Request) {
+    http.ServeFile(w, r, "frontend/index.html")
+})
+mux.HandleFunc("/reset-password", func(w http.ResponseWriter, r *http.Request) {
+    http.ServeFile(w, r, "frontend/index.html")
+})
