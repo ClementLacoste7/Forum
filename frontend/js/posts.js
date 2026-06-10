@@ -33,31 +33,40 @@ export async function renderHome(category = null) {
     list.innerHTML = filtered.map(p => `
       <div class="post-card" data-id="${p.ID}">
         <div class="post-card-votes">
-          <span class="vote-count">${p.Likes?.length || 0}</span>
+          <span class="vote-count">${p.Likes?.filter(l => l.IsLike).length || 0} likes</span>
+          <span class="vote-count">${p.Likes?.filter(l => !l.IsLike).length || 0} dislikes</span>
         </div>
         <div class="post-card-body">
           <div class="post-card-tags">
             ${p.Categories?.map(c => `<span class="tag" data-category="${c.Name}">${c.Name}</span>`).join("") || ""}
           </div>
-          <h3 class="post-card-title" data-id="${p.ID}">${p.Title}</h3>
+          <h3 class="post-card-title">${p.Title}</h3>
           <p class="post-card-preview">${p.Content.replace(/<[^>]*>/g, "").substring(0, 150)}...</p>
           <div class="post-card-meta">
             <span class="post-author">By <strong>${p.User?.Username || "Unknown"}</strong></span>
             <span class="post-date">${formatDate(p.CreatedAt)}</span>
-            <span class="post-comments">💬 ${p.Comments?.length || 0} comments</span>
+            <span class="post-comments">${p.Comments?.length || 0} comments</span>
           </div>
         </div>
         ${p.ImagePath ? `<img src="${p.ImagePath}" class="post-card-image" />` : ""}
       </div>
     `).join("")
 
-    document.querySelectorAll(".post-card-title").forEach(el => {
-      el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
+    // Click on entire card to open post
+    document.querySelectorAll(".post-card").forEach(card => {
+      card.addEventListener("click", (e) => {
+        if (e.target.classList.contains("tag")) return
+        navigate(`/post/${card.dataset.id}`)
+      })
     })
 
+    // Click on tag to filter
     document.querySelectorAll(".post-card-tags .tag").forEach(tag => {
       tag.style.cursor = "pointer"
-      tag.addEventListener("click", () => renderHome(tag.dataset.category))
+      tag.addEventListener("click", (e) => {
+        e.stopPropagation()
+        renderHome(tag.dataset.category)
+      })
     })
 
   } catch (err) {
