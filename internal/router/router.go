@@ -36,13 +36,12 @@ func New(db *gorm.DB) http.Handler {
 	mux.HandleFunc("/api/auth/register", h.Register)
 	mux.HandleFunc("/api/auth/login", h.Login)
 	mux.HandleFunc("/api/auth/refresh", h.Refresh)
+	mux.HandleFunc("/api/auth/forgot-password", h.ForgotPassword)
+	mux.HandleFunc("/api/auth/reset-password", h.ResetPassword)
 
 	// Categories (public)
 	mux.HandleFunc("/api/categories", h.GetCategories)
 
-	// Passwords
-	mux.HandleFunc("/api/auth/forgot-password", h.ForgotPassword)
-	mux.HandleFunc("/api/auth/reset-password", h.ResetPassword)
 	// Stats (public)
 	mux.HandleFunc("/api/stats", h.GetStats)
 
@@ -75,18 +74,20 @@ func New(db *gorm.DB) http.Handler {
 		}
 	})
 
-	// Likes (protégé)
-	mux.HandleFunc("/api/likes", middleware.RequireAuth(h.ToggleLike))
+	// Likes
+	mux.HandleFunc("/api/likes", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			h.GetLikes(w, r)
+		case http.MethodPost:
+			middleware.RequireAuth(h.ToggleLike)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Profile (protégé)
 	mux.HandleFunc("/api/profile", middleware.RequireAuth(h.GetProfile))
 
 	return middleware.CORS(mux)
 }
-
-mux.HandleFunc("/forgot-password", func(w http.ResponseWriter, r *http.Request) {
-    http.ServeFile(w, r, "frontend/index.html")
-})
-mux.HandleFunc("/reset-password", func(w http.ResponseWriter, r *http.Request) {
-    http.ServeFile(w, r, "frontend/index.html")
-})
