@@ -5,11 +5,11 @@ import { renderComments } from "./comments.js"
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
 }
 
 export async function renderHome(category = null) {
-  document.getElementById("main-content").innerHTML = `<div id="posts-list">Chargement...</div>`
+  document.getElementById("main-content").innerHTML = `<div id="posts-list">Loading...</div>`
 
   try {
     const posts = await api.get("/posts")
@@ -22,8 +22,8 @@ export async function renderHome(category = null) {
     if (!filtered.length) {
       list.innerHTML = `
         <div class="empty-state">
-          <p>Aucun post pour l'instant.</p>
-          ${localStorage.getItem("access_token") ? `<button class="btn-primary" id="new-post-empty">Créer le premier post</button>` : ""}
+          <p>No posts yet.</p>
+          ${localStorage.getItem("access_token") ? `<button class="btn-primary" id="new-post-empty">Create the first post</button>` : ""}
         </div>
       `
       document.getElementById("new-post-empty")?.addEventListener("click", () => navigate("/new-post"))
@@ -42,9 +42,9 @@ export async function renderHome(category = null) {
           <h3 class="post-card-title" data-id="${p.ID}">${p.Title}</h3>
           <p class="post-card-preview">${p.Content.replace(/<[^>]*>/g, "").substring(0, 150)}...</p>
           <div class="post-card-meta">
-            <span class="post-author">Par <strong>${p.User?.Username || "Inconnu"}</strong></span>
+            <span class="post-author">By <strong>${p.User?.Username || "Unknown"}</strong></span>
             <span class="post-date">${formatDate(p.CreatedAt)}</span>
-            <span class="post-comments">💬 ${p.Comments?.length || 0} commentaires</span>
+            <span class="post-comments">💬 ${p.Comments?.length || 0} comments</span>
           </div>
         </div>
         ${p.ImagePath ? `<img src="${p.ImagePath}" class="post-card-image" />` : ""}
@@ -61,12 +61,12 @@ export async function renderHome(category = null) {
     })
 
   } catch (err) {
-    document.getElementById("main-content").innerHTML = "<p>Erreur de chargement.</p>"
+    document.getElementById("main-content").innerHTML = "<p>Failed to load posts.</p>"
   }
 }
 
 export async function renderPost(id) {
-  document.getElementById("main-content").innerHTML = "<p>Chargement...</p>"
+  document.getElementById("main-content").innerHTML = "<p>Loading...</p>"
 
   try {
     const post = await api.get(`/posts/${id}`)
@@ -81,14 +81,14 @@ export async function renderPost(id) {
 
     document.getElementById("main-content").innerHTML = `
       <div class="post-full">
-        <button class="btn-back" id="back-btn">← Retour</button>
+        <button class="btn-back" id="back-btn">← Back</button>
         <div class="post-full-header">
           <div class="post-tags">
             ${post.Categories?.map(c => `<span class="tag">${c.Name}</span>`).join("") || ""}
           </div>
           <h2>${post.Title}</h2>
           <div class="post-full-meta">
-            <span>Par <strong>${post.User?.Username || "Inconnu"}</strong></span>
+            <span>By <strong>${post.User?.Username || "Unknown"}</strong></span>
             <span>${formatDate(post.CreatedAt)}</span>
           </div>
         </div>
@@ -119,7 +119,7 @@ export async function renderPost(id) {
     renderComments(post.ID)
 
   } catch (err) {
-    document.getElementById("main-content").innerHTML = "<p>Post introuvable.</p>"
+    document.getElementById("main-content").innerHTML = "<p>Post not found.</p>"
   }
 }
 
@@ -130,17 +130,17 @@ export async function renderNewPost() {
   try {
     categories = await api.get("/categories")
   } catch (err) {
-    alert("Erreur chargement catégories")
+    alert("Failed to load categories")
     return
   }
 
   document.getElementById("main-content").innerHTML = `
     <div class="new-post-form">
-      <h2>Nouveau post</h2>
+      <h2>New Post</h2>
       <div id="post-error" class="error-msg"></div>
-      <input id="post-title" type="text" placeholder="Titre du post *" />
+      <input id="post-title" type="text" placeholder="Post title *" />
       <div class="categories-select">
-        <p class="categories-label">Catégories *</p>
+        <p class="categories-label">Categories *</p>
         <div class="categories-checkboxes">
           ${categories.map(c => `
             <label class="category-checkbox">
@@ -153,12 +153,12 @@ export async function renderNewPost() {
       <div id="editor-container"></div>
       <div class="image-upload-box">
         <label class="image-upload-label">
-          Image (optionnelle, max 20MB)
+          Image (optional, max 20MB)
           <input type="file" id="post-image" accept=".png,.jpg,.jpeg,.gif" />
         </label>
         <div id="image-preview"></div>
       </div>
-      <button class="btn-primary" id="post-submit">Publier</button>
+      <button class="btn-primary" id="post-submit">Publish</button>
     </div>
   `
 
@@ -181,9 +181,9 @@ export async function renderNewPost() {
     const errorEl = document.getElementById("post-error")
     errorEl.textContent = ""
 
-    if (!title) { errorEl.textContent = "Le titre est obligatoire."; return }
-    if (!content.trim()) { errorEl.textContent = "Le contenu est obligatoire."; return }
-    if (!selected.length) { errorEl.textContent = "Sélectionne au moins une catégorie."; return }
+    if (!title) { errorEl.textContent = "Title is required."; return }
+    if (!content.trim()) { errorEl.textContent = "Content is required."; return }
+    if (!selected.length) { errorEl.textContent = "Select at least one category."; return }
 
     const formData = new FormData()
     formData.append("title", title)
@@ -201,7 +201,7 @@ export async function renderNewPost() {
       if (!res.ok) throw new Error(await res.text())
       navigate("/")
     } catch (err) {
-      errorEl.textContent = err.message || "Erreur"
+      errorEl.textContent = err.message || "An error occurred."
     }
   })
 }
