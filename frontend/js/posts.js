@@ -47,6 +47,7 @@ export async function renderHome(category = null) {
             <span class="post-comments">💬 ${p.Comments?.length || 0} commentaires</span>
           </div>
         </div>
+        ${p.ImagePath ? `<img src="${p.ImagePath}" class="post-card-image" />` : ""}
       </div>
     `).join("")
 
@@ -54,7 +55,6 @@ export async function renderHome(category = null) {
       el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
     })
 
-    // Filter by tag click on post card
     document.querySelectorAll(".post-card-tags .tag").forEach(tag => {
       tag.style.cursor = "pointer"
       tag.addEventListener("click", () => renderHome(tag.dataset.category))
@@ -71,7 +71,6 @@ export async function renderPost(id) {
   try {
     const post = await api.get(`/posts/${id}`)
 
-    // Fetch likes count
     let likeCount = 0
     let dislikeCount = 0
     try {
@@ -93,6 +92,7 @@ export async function renderPost(id) {
             <span>${formatDate(post.CreatedAt)}</span>
           </div>
         </div>
+        ${post.ImagePath ? `<img src="${post.ImagePath}" class="post-image" />` : ""}
         <div class="post-content">${post.Content}</div>
         <div class="likes-section">
           <button class="like-btn" data-like="true">Like <span id="like-count">${likeCount}</span></button>
@@ -137,9 +137,10 @@ export async function renderNewPost() {
   document.getElementById("main-content").innerHTML = `
     <div class="new-post-form">
       <h2>Nouveau post</h2>
-      <input id="post-title" type="text" placeholder="Titre du post" />
+      <div id="post-error" class="error-msg"></div>
+      <input id="post-title" type="text" placeholder="Titre du post *" />
       <div class="categories-select">
-        <p class="categories-label">Catégories</p>
+        <p class="categories-label">Catégories *</p>
         <div class="categories-checkboxes">
           ${categories.map(c => `
             <label class="category-checkbox">
@@ -150,26 +151,57 @@ export async function renderNewPost() {
         </div>
       </div>
       <div id="editor-container"></div>
+      <div class="image-upload-box">
+        <label class="image-upload-label">
+          Image (optionnelle, max 20MB)
+          <input type="file" id="post-image" accept=".png,.jpg,.jpeg,.gif" />
+        </label>
+        <div id="image-preview"></div>
+      </div>
       <button class="btn-primary" id="post-submit">Publier</button>
     </div>
   `
 
   initEditor("editor-container")
 
+  document.getElementById("post-image").addEventListener("change", (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const preview = document.getElementById("image-preview")
+    const url = URL.createObjectURL(file)
+    preview.innerHTML = `<img src="${url}" class="image-preview-img" />`
+  })
+
   document.getElementById("post-submit").addEventListener("click", async () => {
-    const title = document.getElementById("post-title").value
+    const title = document.getElementById("post-title").value.trim()
     const content = getEditorContent()
     const selected = [...document.querySelectorAll(".categories-checkboxes input:checked")]
       .map(el => el.value)
+    const imageFile = document.getElementById("post-image").files[0]
+    const errorEl = document.getElementById("post-error")
+    errorEl.textContent = ""
 
-    if (!title.trim() || !content.trim()) return alert("Titre et contenu requis")
-    if (!selected.length) return alert("Sélectionne au moins une catégorie")
+    if (!title) { errorEl.textContent = "Le titre est obligatoire."; return }
+    if (!content.trim()) { errorEl.textContent = "Le contenu est obligatoire."; return }
+    if (!selected.length) { errorEl.textContent = "Sélectionne au moins une catégorie."; return }
+
+    const formData = new FormData()
+    formData.append("title", title)
+    formData.append("content", content)
+    selected.forEach(cat => formData.append("categories", cat))
+    if (imageFile) formData.append("image", imageFile)
 
     try {
-      await api.post("/posts", { title, content, categories: selected })
+      const token = localStorage.getItem("access_token")
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData,
+      })
+      if (!res.ok) throw new Error(await res.text())
       navigate("/")
     } catch (err) {
-      alert(err.message || "Erreur")
+      errorEl.textContent = err.message || "Erreur"
     }
   })
 }
