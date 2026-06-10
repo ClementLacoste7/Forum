@@ -24,9 +24,11 @@ body {
 }
 
 .nav-logo {
-  height: 45px;
+  height: 40px;
+  width: auto;
   cursor: pointer;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 
