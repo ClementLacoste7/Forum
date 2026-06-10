@@ -34,6 +34,9 @@ func extractUserID(r *http.Request) (uint, error) {
 
 	tokenStr := strings.TrimPrefix(header, "Bearer ")
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, http.ErrNoCookie
+		}
 		return []byte("change-me-in-production"), nil
 	})
 	if err != nil || !token.Valid {
