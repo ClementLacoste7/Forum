@@ -1,7 +1,6 @@
 import { api } from "./api.js"
 import { navigate } from "./router.js"
 
-// Generate a simple math captcha
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 10) + 1
   const b = Math.floor(Math.random() * 10) + 1
@@ -16,15 +15,8 @@ export async function renderAuth() {
   const isForgot = path === "/forgot-password"
   const isReset = path === "/reset-password"
 
-  if (isForgot) {
-    renderForgotPassword()
-    return
-  }
-
-  if (isReset) {
-    renderResetPassword()
-    return
-  }
+  if (isForgot) { renderForgotPassword(); return }
+  if (isReset) { renderResetPassword(); return }
 
   captcha = generateCaptcha()
 
@@ -32,15 +24,24 @@ export async function renderAuth() {
     <div class="auth-form">
       <h2>${isLogin ? "Connexion" : "Inscription"}</h2>
       <div id="auth-error" class="error-msg"></div>
-      <input id="email" type="email" placeholder="Email" />
-      ${!isLogin ? `<input id="username" type="text" placeholder="Pseudo" />` : ""}
-      <input id="password" type="password" placeholder="Mot de passe" />
+      <div class="input-group">
+        <input id="email" type="email" placeholder="Email *" required />
+      </div>
       ${!isLogin ? `
-        <div class="captcha-box">
-          <label>Combien font <strong>${captcha.question}</strong> ?</label>
-          <input id="captcha-input" type="number" placeholder="Réponse" />
+        <div class="input-group">
+          <input id="username" type="text" placeholder="Pseudo *" required />
         </div>
       ` : ""}
+      <div class="input-group">
+        <input id="password" type="password" placeholder="Mot de passe *" required />
+      </div>
+      ${!isLogin ? `
+        <div class="captcha-box">
+          <label>Combien font <strong>${captcha.question}</strong> ? *</label>
+          <input id="captcha-input" type="number" placeholder="Réponse *" required />
+        </div>
+      ` : ""}
+      ${isLogin ? `<p class="input-hint">Connectez-vous avec votre adresse email</p>` : `<p class="input-hint">Tous les champs sont obligatoires</p>`}
       <button class="btn-primary" id="submit-btn">${isLogin ? "Se connecter" : "S'inscrire"}</button>
       ${isLogin ? `<p class="auth-link"><a id="forgot-link" href="/forgot-password">Mot de passe oublié ?</a></p>` : ""}
     </div>
@@ -52,10 +53,15 @@ export async function renderAuth() {
   })
 
   document.getElementById("submit-btn").addEventListener("click", async () => {
-    const email = document.getElementById("email").value
-    const password = document.getElementById("password").value
+    const email = document.getElementById("email").value.trim()
+    const password = document.getElementById("password").value.trim()
     const errorEl = document.getElementById("auth-error")
     errorEl.textContent = ""
+
+    if (!email || !password) {
+      errorEl.textContent = "Tous les champs sont obligatoires."
+      return
+    }
 
     try {
       if (isLogin) {
@@ -64,13 +70,18 @@ export async function renderAuth() {
         localStorage.setItem("refresh_token", data.refresh_token)
         navigate("/")
       } else {
-        const username = document.getElementById("username").value
+        const username = document.getElementById("username").value.trim()
         const captchaAnswer = parseInt(document.getElementById("captcha-input").value)
+
+        if (!username) {
+          errorEl.textContent = "Le pseudo est obligatoire."
+          return
+        }
 
         if (captchaAnswer !== captcha.answer) {
           errorEl.textContent = "Mauvaise réponse au captcha."
           captcha = generateCaptcha()
-          document.querySelector(".captcha-box label").innerHTML = `Combien font <strong>${captcha.question}</strong> ?`
+          document.querySelector(".captcha-box label").innerHTML = `Combien font <strong>${captcha.question}</strong> ? *`
           return
         }
 
@@ -89,7 +100,7 @@ async function renderForgotPassword() {
       <h2>Mot de passe oublié</h2>
       <div id="auth-error" class="error-msg"></div>
       <div id="auth-success" class="success-msg"></div>
-      <input id="email" type="email" placeholder="Votre email" />
+      <input id="email" type="email" placeholder="Votre email *" required />
       <button class="btn-primary" id="submit-btn">Envoyer le lien</button>
       <p class="auth-link"><a id="login-link" href="/login">Retour à la connexion</a></p>
     </div>
@@ -101,11 +112,16 @@ async function renderForgotPassword() {
   })
 
   document.getElementById("submit-btn").addEventListener("click", async () => {
-    const email = document.getElementById("email").value
+    const email = document.getElementById("email").value.trim()
     const errorEl = document.getElementById("auth-error")
     const successEl = document.getElementById("auth-success")
     errorEl.textContent = ""
     successEl.textContent = ""
+
+    if (!email) {
+      errorEl.textContent = "L'email est obligatoire."
+      return
+    }
 
     try {
       await api.post("/auth/forgot-password", { email })
@@ -124,17 +140,22 @@ async function renderResetPassword() {
       <h2>Nouveau mot de passe</h2>
       <div id="auth-error" class="error-msg"></div>
       <div id="auth-success" class="success-msg"></div>
-      <input id="password" type="password" placeholder="Nouveau mot de passe" />
+      <input id="password" type="password" placeholder="Nouveau mot de passe *" required />
       <button class="btn-primary" id="submit-btn">Réinitialiser</button>
     </div>
   `
 
   document.getElementById("submit-btn").addEventListener("click", async () => {
-    const password = document.getElementById("password").value
+    const password = document.getElementById("password").value.trim()
     const errorEl = document.getElementById("auth-error")
     const successEl = document.getElementById("auth-success")
     errorEl.textContent = ""
     successEl.textContent = ""
+
+    if (!password) {
+      errorEl.textContent = "Le mot de passe est obligatoire."
+      return
+    }
 
     try {
       await api.post("/auth/reset-password", { token, password })

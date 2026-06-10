@@ -632,6 +632,11 @@ body {
   font-size: 0.85rem;
   color: #2d1b4e;
 }
+.input-hint {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-top: -0.3rem;
+}
 
 .category-checkbox input { accent-color: #c084fc; }
 
