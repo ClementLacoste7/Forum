@@ -1,3 +1,6 @@
+remplace : 
+
+```go
 package router
 
 import (
@@ -91,3 +94,5 @@ func New(db *gorm.DB) http.Handler {
 
 	return middleware.CORS(mux)
 }
+
+```
