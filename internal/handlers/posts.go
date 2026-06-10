@@ -2,8 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"forum/internal/middleware"
 	"forum/internal/models"
@@ -23,19 +28,19 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		Title      string   `json:"title"`
-		Content    string   `json:"content"`
-		Categories []string `json:"categories"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+	// Parse multipart form (max 20MB)
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
 
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	categoryNames := r.Form["categories"]
+
 	// Only allow existing categories
 	var categories []models.Category
-	for _, name := range body.Categories {
+	for _, name := range categoryNames {
 		var cat models.Category
 		if err := h.DB.Where("name = ?", name).First(&cat).Error; err != nil {
 			http.Error(w, "categorie invalide: "+name, http.StatusBadRequest)
@@ -44,11 +49,34 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		categories = append(categories, cat)
 	}
 
+	// Handle image upload
+	var imagePath string
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		ext := filepath.Ext(header.Filename)
+		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true}
+		if !allowed[strings.ToLower(ext)] {
+			http.Error(w, "format d'image invalide", http.StatusBadRequest)
+			return
+		}
+		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+		dst, err := os.Create("uploads/" + filename)
+		if err != nil {
+			http.Error(w, "erreur sauvegarde image", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+		io.Copy(dst, file)
+		imagePath = "/uploads/" + filename
+	}
+
 	post := models.Post{
-		Title:      body.Title,
-		Content:    body.Content,
+		Title:      title,
+		Content:    content,
 		UserID:     userID,
 		Categories: categories,
+		ImagePath:  imagePath,
 	}
 	h.DB.Create(&post)
 	w.Header().Set("Content-Type", "application/json")
