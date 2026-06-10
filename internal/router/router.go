@@ -1,6 +1,3 @@
-remplace : 
-
-```go
 package router
 
 import (
@@ -26,7 +23,7 @@ func New(db *gorm.DB) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		fullPath := filepath.Join("frontend", r.URL.Path[1:])
+		fullPath := filepath.Join("frontend", filepath.FromSlash(r.URL.Path[1:]))
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			http.ServeFile(w, r, "frontend/index.html")
 			return
@@ -94,5 +91,3 @@ func New(db *gorm.DB) http.Handler {
 
 	return middleware.CORS(mux)
 }
-
-```
