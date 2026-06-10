@@ -716,3 +716,10 @@ body {
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
+.post-card-image {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
