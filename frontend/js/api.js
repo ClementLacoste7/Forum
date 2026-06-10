@@ -8,7 +8,6 @@ function getRefreshToken() {
   return localStorage.getItem("refresh_token")
 }
 
-// Try to get a new access token using the refresh token
 async function refreshAccessToken() {
   const refreshToken = getRefreshToken()
   if (!refreshToken) throw new Error("no refresh token")
@@ -51,18 +50,24 @@ async function request(method, endpoint, body = null, retry = true) {
     }
   }
 
+  if (res.status === 204) return null
+
+  // Read body once
+  const text = await res.text()
+
   if (!res.ok) {
     try {
-      throw await res.json()
+      throw JSON.parse(text)
     } catch {
-      throw new Error(await res.text())
+      throw new Error(text)
     }
   }
 
-  // No content, nothing to parse
-  if (res.status === 204) return null
-
-  return res.json()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
+  }
 }
 
 export const api = {
