@@ -22,28 +22,28 @@ export async function renderAuth() {
 
   document.getElementById("main-content").innerHTML = `
     <div class="auth-form">
-      <h2>${isLogin ? "Connexion" : "Inscription"}</h2>
+      <h2>${isLogin ? "Sign In" : "Sign Up"}</h2>
       <div id="auth-error" class="error-msg"></div>
       <div class="input-group">
         <input id="email" type="email" placeholder="Email *" required />
       </div>
       ${!isLogin ? `
         <div class="input-group">
-          <input id="username" type="text" placeholder="Pseudo *" required />
+          <input id="username" type="text" placeholder="Username *" required />
         </div>
       ` : ""}
       <div class="input-group">
-        <input id="password" type="password" placeholder="Mot de passe *" required />
+        <input id="password" type="password" placeholder="Password *" required />
       </div>
       ${!isLogin ? `
         <div class="captcha-box">
-          <label>Combien font <strong>${captcha.question}</strong> ? *</label>
-          <input id="captcha-input" type="number" placeholder="Réponse *" required />
+          <label>What is <strong>${captcha.question}</strong>? *</label>
+          <input id="captcha-input" type="number" placeholder="Answer *" required />
         </div>
       ` : ""}
-      ${isLogin ? `<p class="input-hint">Connectez-vous avec votre adresse email</p>` : `<p class="input-hint">Tous les champs sont obligatoires</p>`}
-      <button class="btn-primary" id="submit-btn">${isLogin ? "Se connecter" : "S'inscrire"}</button>
-      ${isLogin ? `<p class="auth-link"><a id="forgot-link" href="/forgot-password">Mot de passe oublié ?</a></p>` : ""}
+      ${isLogin ? `<p class="input-hint">Sign in with your email address</p>` : `<p class="input-hint">All fields are required</p>`}
+      <button class="btn-primary" id="submit-btn">${isLogin ? "Sign In" : "Sign Up"}</button>
+      ${isLogin ? `<p class="auth-link"><a id="forgot-link" href="/forgot-password">Forgot your password?</a></p>` : ""}
     </div>
   `
 
@@ -59,7 +59,7 @@ export async function renderAuth() {
     errorEl.textContent = ""
 
     if (!email || !password) {
-      errorEl.textContent = "Tous les champs sont obligatoires."
+      errorEl.textContent = "All fields are required."
       return
     }
 
@@ -74,14 +74,14 @@ export async function renderAuth() {
         const captchaAnswer = parseInt(document.getElementById("captcha-input").value)
 
         if (!username) {
-          errorEl.textContent = "Le pseudo est obligatoire."
+          errorEl.textContent = "Username is required."
           return
         }
 
         if (captchaAnswer !== captcha.answer) {
-          errorEl.textContent = "Mauvaise réponse au captcha."
+          errorEl.textContent = "Wrong captcha answer."
           captcha = generateCaptcha()
-          document.querySelector(".captcha-box label").innerHTML = `Combien font <strong>${captcha.question}</strong> ? *`
+          document.querySelector(".captcha-box label").innerHTML = `What is <strong>${captcha.question}</strong>? *`
           return
         }
 
@@ -89,7 +89,7 @@ export async function renderAuth() {
         navigate("/login")
       }
     } catch (err) {
-      errorEl.textContent = err.message || "Erreur"
+      errorEl.textContent = err.message || "An error occurred."
     }
   })
 }
@@ -97,12 +97,12 @@ export async function renderAuth() {
 async function renderForgotPassword() {
   document.getElementById("main-content").innerHTML = `
     <div class="auth-form">
-      <h2>Mot de passe oublié</h2>
+      <h2>Forgot Password</h2>
       <div id="auth-error" class="error-msg"></div>
       <div id="auth-success" class="success-msg"></div>
-      <input id="email" type="email" placeholder="Votre email *" required />
-      <button class="btn-primary" id="submit-btn">Envoyer le lien</button>
-      <p class="auth-link"><a id="login-link" href="/login">Retour à la connexion</a></p>
+      <input id="email" type="email" placeholder="Your email *" required />
+      <button class="btn-primary" id="submit-btn">Send reset link</button>
+      <p class="auth-link"><a id="login-link" href="/login">Back to sign in</a></p>
     </div>
   `
 
@@ -119,15 +119,15 @@ async function renderForgotPassword() {
     successEl.textContent = ""
 
     if (!email) {
-      errorEl.textContent = "L'email est obligatoire."
+      errorEl.textContent = "Email is required."
       return
     }
 
     try {
       await api.post("/auth/forgot-password", { email })
-      successEl.textContent = "Si ce compte existe, un email a été envoyé."
+      successEl.textContent = "If this account exists, a reset email has been sent."
     } catch (err) {
-      errorEl.textContent = err.message || "Erreur"
+      errorEl.textContent = err.message || "An error occurred."
     }
   })
 }
@@ -137,11 +137,11 @@ async function renderResetPassword() {
 
   document.getElementById("main-content").innerHTML = `
     <div class="auth-form">
-      <h2>Nouveau mot de passe</h2>
+      <h2>New Password</h2>
       <div id="auth-error" class="error-msg"></div>
       <div id="auth-success" class="success-msg"></div>
-      <input id="password" type="password" placeholder="Nouveau mot de passe *" required />
-      <button class="btn-primary" id="submit-btn">Réinitialiser</button>
+      <input id="password" type="password" placeholder="New password *" required />
+      <button class="btn-primary" id="submit-btn">Reset password</button>
     </div>
   `
 
@@ -153,16 +153,16 @@ async function renderResetPassword() {
     successEl.textContent = ""
 
     if (!password) {
-      errorEl.textContent = "Le mot de passe est obligatoire."
+      errorEl.textContent = "Password is required."
       return
     }
 
     try {
       await api.post("/auth/reset-password", { token, password })
-      successEl.textContent = "Mot de passe mis à jour, vous pouvez vous connecter."
+      successEl.textContent = "Password updated, you can now sign in."
       setTimeout(() => navigate("/login"), 2000)
     } catch (err) {
-      errorEl.textContent = err.message || "Token invalide ou expiré."
+      errorEl.textContent = err.message || "Invalid or expired token."
     }
   })
 }
