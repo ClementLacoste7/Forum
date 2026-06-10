@@ -678,3 +678,41 @@ body {
 }
 
 .auth-link a { color: #c084fc; }
+
+.image-upload-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.image-upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.image-upload-label input {
+  padding: 0.4rem;
+  border: 1px solid #e0c8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.image-preview-img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-top: 0.5rem;
+}
+
+.post-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
