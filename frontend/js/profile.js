@@ -7,9 +7,9 @@ export async function renderProfile() {
 
   document.getElementById("main-content").innerHTML = `
     <div class="profile-container">
-      <h2>Mon profil</h2>
+      <h2>My Profile</h2>
       <div id="profile-error" class="error-msg"></div>
-      <div id="profile-data">Chargement...</div>
+      <div id="profile-data">Loading...</div>
     </div>
   `
 
@@ -17,42 +17,42 @@ export async function renderProfile() {
     const data = await api.get("/profile")
     renderProfileData(data)
   } catch (err) {
-    document.getElementById("profile-data").innerHTML = "<p>Erreur de chargement.</p>"
+    document.getElementById("profile-data").innerHTML = "<p>Failed to load profile.</p>"
   }
 }
 
 async function renderProfileData(data) {
   document.getElementById("profile-data").innerHTML = `
     <div class="profile-info">
-      <p><strong>Pseudo :</strong> ${data.user.Username}</p>
-      <p><strong>Email :</strong> ${data.user.Email}</p>
+      <p><strong>Username:</strong> ${data.user.Username}</p>
+      <p><strong>Email:</strong> ${data.user.Email}</p>
     </div>
 
-    <h3>Mes posts (${data.posts?.length || 0})</h3>
+    <h3>My Posts (${data.posts?.length || 0})</h3>
     <ul class="profile-list" id="profile-posts">
       ${data.posts?.length ? data.posts.map(p => `
         <li class="profile-list-item">
           <span class="profile-post-title" data-id="${p.ID}">${p.Title}</span>
-          <button class="btn-delete-post" data-id="${p.ID}">Supprimer</button>
+          <button class="btn-delete-post" data-id="${p.ID}">Delete</button>
         </li>
-      `).join("") : "<li>Aucun post</li>"}
+      `).join("") : "<li>No posts yet.</li>"}
     </ul>
 
-    <h3>Mes commentaires (${data.comments?.length || 0})</h3>
+    <h3>My Comments (${data.comments?.length || 0})</h3>
     <ul class="profile-list">
       ${data.comments?.length ? data.comments.map(c => `
         <li class="profile-list-item">${c.Content}</li>
-      `).join("") : "<li>Aucun commentaire</li>"}
+      `).join("") : "<li>No comments yet.</li>"}
     </ul>
 
-    <h3>Mes likes (${data.likes?.length || 0})</h3>
+    <h3>My Likes (${data.likes?.length || 0})</h3>
     <ul class="profile-list">
       ${data.likes?.length ? data.likes.map(l => `
         <li class="profile-list-item">${l.IsLike ? "Like" : "Dislike"} — Post #${l.PostID}</li>
-      `).join("") : "<li>Aucun like</li>"}
+      `).join("") : "<li>No likes yet.</li>"}
     </ul>
 
-    <button id="logout-btn">Se déconnecter</button>
+    <button id="logout-btn">Sign out</button>
   `
 
   document.querySelectorAll(".profile-post-title").forEach(el => {
@@ -61,12 +61,11 @@ async function renderProfileData(data) {
 
   document.querySelectorAll(".btn-delete-post").forEach(btn => {
     btn.addEventListener("click", async () => {
-      // Show inline confirm
       const li = btn.closest("li")
       li.innerHTML = `
-        <span>Confirmer la suppression ?</span>
-        <button class="btn-confirm-delete" data-id="${btn.dataset.id}">Oui</button>
-        <button class="btn-cancel-delete">Annuler</button>
+        <span>Confirm deletion?</span>
+        <button class="btn-confirm-delete" data-id="${btn.dataset.id}">Yes</button>
+        <button class="btn-cancel-delete">Cancel</button>
       `
 
       li.querySelector(".btn-cancel-delete").addEventListener("click", async () => {
@@ -80,7 +79,7 @@ async function renderProfileData(data) {
           const data = await api.get("/profile")
           renderProfileData(data)
         } catch (err) {
-          document.getElementById("profile-error").textContent = "Erreur lors de la suppression."
+          document.getElementById("profile-error").textContent = "Failed to delete post."
         }
       })
     })
