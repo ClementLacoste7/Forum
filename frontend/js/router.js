@@ -10,12 +10,12 @@ function renderNavbar() {
   const nav = document.getElementById("nav-links")
 
   nav.innerHTML = token ? `
-    <a id="nav-home">Accueil</a>
-    <a id="nav-profile">Mon profil</a>
-    <button id="nav-logout">Déconnexion</button>
+    <a id="nav-home">Home</a>
+    <a id="nav-profile">My Profile</a>
+    <button id="nav-logout">Sign out</button>
   ` : `
-    <a id="nav-login">Connexion</a>
-    <a id="nav-register">Inscription</a>
+    <a id="nav-login">Sign in</a>
+    <a id="nav-register">Sign up</a>
   `
 
   document.getElementById("nav-home")?.addEventListener("click", () => navigate("/"))
@@ -28,7 +28,17 @@ function renderNavbar() {
     navigate("/")
   })
 
-  document.querySelector(".nav-logo")?.addEventListener("click", () => navigate("/"))
+  document.querySelector(".nav-brand")?.addEventListener("click", () => navigate("/"))
+
+  // Search filter
+  const searchInput = document.getElementById("search-input")
+  searchInput?.addEventListener("input", () => {
+    const query = searchInput.value.toLowerCase().trim()
+    document.querySelectorAll(".post-card").forEach(card => {
+      const title = card.querySelector(".post-card-title")?.textContent.toLowerCase() || ""
+      card.style.display = title.includes(query) ? "" : "none"
+    })
+  })
 }
 
 async function renderSidebar() {
@@ -54,7 +64,7 @@ async function renderSidebar() {
     const list = document.getElementById("category-list")
     if (!list) return
 
-    list.innerHTML = `<li class="category-item active" data-category="null">Tous les sujets</li>`
+    list.innerHTML = `<li class="category-item active" data-category="null">All Topics</li>`
       + categories.map(c => `
         <li class="category-item" data-category="${c.Name}">${c.Name}</li>
       `).join("")
@@ -68,7 +78,18 @@ async function renderSidebar() {
       })
     })
   } catch (err) {
-    console.error("Erreur chargement catégories", err)
+    console.error("Failed to load categories", err)
+  }
+
+  // Load stats
+  try {
+    const stats = await api.get("/stats")
+    const statPosts = document.getElementById("stat-posts")
+    const statMembers = document.getElementById("stat-members")
+    if (statPosts) statPosts.textContent = stats.posts
+    if (statMembers) statMembers.textContent = stats.members
+  } catch (err) {
+    console.error("Failed to load stats", err)
   }
 }
 
@@ -81,14 +102,14 @@ function matchRoute(path) {
 }
 
 const routes = {
-  "/":                renderHome,
+  "/":                () => renderHome(currentCategory),
   "/profile":         renderProfile,
   "/login":           renderAuth,
   "/register":        renderAuth,
   "/new-post":        renderNewPost,
   "/forgot-password": renderAuth,
   "/reset-password":  renderAuth,
-}                             
+}
 
 export function navigate(path) {
   window.history.pushState({}, "", path)
@@ -105,5 +126,3 @@ function render(path) {
 
 window.addEventListener("popstate", () => render(window.location.pathname))
 document.addEventListener("DOMContentLoaded", () => render(window.location.pathname))
-
-           
