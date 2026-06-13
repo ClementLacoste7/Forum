@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"forum/internal/models"
@@ -27,6 +28,24 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	body.Username = strings.TrimSpace(body.Username)
+	body.Email = strings.TrimSpace(body.Email)
+	body.Password = strings.TrimSpace(body.Password)
+
+	if body.Username == "" || body.Email == "" || body.Password == "" {
+		http.Error(w, "all fields are required", http.StatusBadRequest)
+		return
+	}
+	if len(body.Password) < 6 {
+		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+	if !strings.Contains(body.Email, "@") {
+		http.Error(w, "invalid email address", http.StatusBadRequest)
 		return
 	}
 
@@ -64,6 +83,15 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	body.Email = strings.TrimSpace(body.Email)
+	body.Password = strings.TrimSpace(body.Password)
+
+	if body.Email == "" || body.Password == "" {
+		http.Error(w, "email and password are required", http.StatusBadRequest)
 		return
 	}
 
@@ -115,6 +143,11 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(body.RefreshToken) == "" {
+		http.Error(w, "refresh token is required", http.StatusBadRequest)
 		return
 	}
 
@@ -190,6 +223,13 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate email
+	body.Email = strings.TrimSpace(body.Email)
+	if body.Email == "" || !strings.Contains(body.Email, "@") {
+		http.Error(w, "valid email is required", http.StatusBadRequest)
+		return
+	}
+
 	var user models.User
 	if err := h.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
 		w.WriteHeader(http.StatusOK)
@@ -242,6 +282,19 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate fields
+	body.Token = strings.TrimSpace(body.Token)
+	body.Password = strings.TrimSpace(body.Password)
+
+	if body.Token == "" || body.Password == "" {
+		http.Error(w, "token and password are required", http.StatusBadRequest)
+		return
+	}
+	if len(body.Password) < 6 {
+		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
 		return
 	}
 
