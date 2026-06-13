@@ -95,6 +95,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 	refreshToken, _ := refresh.SignedString([]byte(h.Config.JWTSecret))
 
+	// Store refresh token in DB
+	h.DB.Model(&user).Update("refresh_token", refreshToken)
+
 	json.NewEncoder(w).Encode(map[string]string{
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
@@ -115,8 +118,11 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate refresh token
+	// Validate refresh token signature
 	token, err := jwt.Parse(body.RefreshToken, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, http.ErrNoCookie
+		}
 		return []byte(h.Config.JWTSecret), nil
 	})
 	if err != nil || !token.Valid {
@@ -126,6 +132,17 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	claims := token.Claims.(jwt.MapClaims)
 	userID := uint(claims["user_id"].(float64))
+
+	// Check token exists in DB (invalidation check)
+	var user models.User
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		http.Error(w, "user not found", http.StatusUnauthorized)
+		return
+	}
+	if user.RefreshToken != body.RefreshToken {
+		http.Error(w, "refresh token revoked", http.StatusUnauthorized)
+		return
+	}
 
 	// Issue new access token
 	access := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -137,6 +154,26 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"access_token": accessToken,
 	})
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Invalidate refresh token in DB
+	h.DB.Model(&models.User{}).Where("refresh_token = ?", body.RefreshToken).Update("refresh_token", "")
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +192,6 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	if err := h.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
-		// Return ok even if user not found to avoid email enumeration
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "email sent if account exists"})
 		return
@@ -172,17 +208,17 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		"reset_token_expiry": time.Now().Add(1 * time.Hour),
 	})
 
-	// Send email
+	// Send reset email
 	resetLink := h.Config.AppURL + "/reset-password?token=" + resetToken
 	m := gomail.NewMessage()
 	m.SetHeader("From", h.Config.SMTPUser)
 	m.SetHeader("To", user.Email)
-	m.SetHeader("Subject", "Réinitialisation de mot de passe")
+	m.SetHeader("Subject", "Password reset")
 	m.SetBody("text/html", `
-		<p>Bonjour `+user.Username+`,</p>
-		<p>Cliquez sur ce lien pour réinitialiser votre mot de passe :</p>
+		<p>Hi `+user.Username+`,</p>
+		<p>Click the link below to reset your password:</p>
 		<a href="`+resetLink+`">`+resetLink+`</a>
-		<p>Ce lien expire dans 1 heure.</p>
+		<p>This link expires in 1 hour.</p>
 	`)
 
 	d := gomail.NewDialer(h.Config.SMTPHost, h.Config.SMTPPort, h.Config.SMTPUser, h.Config.SMTPPassword)
