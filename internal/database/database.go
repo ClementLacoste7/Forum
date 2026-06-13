@@ -11,8 +11,10 @@ import (
 )
 
 var defaultCategories = []string{
-	"Sport", "Tech", "Gaming", "Musique",
-	"Cinéma", "Politique", "Humour", "Autre",
+	"Confessions", "Hot Takes", "Relationships", "Drama",
+	"Glow Up", "Red Flags", "Girl Talk", "Tea Time",
+	"Dating Advice", "Body & Mind", "Career & Adulting",
+	"Friendships", "Fashion & Style", "Life Advice",
 }
 
 // Migration represents a migration entry in the database
@@ -76,20 +78,20 @@ func Init(path string) (*gorm.DB, error) {
 		},
 		{
 			"add_reset_token_to_users",
-			func(db *gorm.DB) error {
-				return db.AutoMigrate(&models.User{})
-			},
+			func(db *gorm.DB) error { return db.AutoMigrate(&models.User{}) },
 		},
 		{
 			"add_refresh_token_to_users",
-			func(db *gorm.DB) error {
-				return db.AutoMigrate(&models.User{})
-			},
+			func(db *gorm.DB) error { return db.AutoMigrate(&models.User{}) },
 		},
 		{
 			"add_image_path_to_posts",
+			func(db *gorm.DB) error { return db.AutoMigrate(&models.Post{}) },
+		},
+		{
+			"update_categories_hidden_talks",
 			func(db *gorm.DB) error {
-				return db.AutoMigrate(&models.Post{})
+				return db.Exec("DELETE FROM categories").Error
 			},
 		},
 	}
