@@ -1,9 +1,19 @@
-import { renderHome, renderPost, renderNewPost } from "./posts.js"
+import { renderHome, renderPost, renderNewPost, renderEditPost } from "./posts.js"
 import { renderProfile } from "./profile.js"
 import { renderAuth } from "./auth.js"
 import { api } from "./api.js"
 
 let currentCategory = null
+
+async function logout() {
+  const refreshToken = localStorage.getItem("refresh_token")
+  try {
+    await api.post("/auth/logout", { refresh_token: refreshToken })
+  } catch {}
+  localStorage.removeItem("access_token")
+  localStorage.removeItem("refresh_token")
+  navigate("/")
+}
 
 function renderNavbar() {
   const token = localStorage.getItem("access_token")
@@ -22,15 +32,10 @@ function renderNavbar() {
   document.getElementById("nav-profile")?.addEventListener("click", () => navigate("/profile"))
   document.getElementById("nav-login")?.addEventListener("click", () => navigate("/login"))
   document.getElementById("nav-register")?.addEventListener("click", () => navigate("/register"))
-  document.getElementById("nav-logout")?.addEventListener("click", () => {
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("refresh_token")
-    navigate("/")
-  })
+  document.getElementById("nav-logout")?.addEventListener("click", logout)
 
   document.querySelector(".nav-brand")?.addEventListener("click", () => navigate("/"))
 
-  // Search filter
   const searchInput = document.getElementById("search-input")
   searchInput?.addEventListener("input", () => {
     const query = searchInput.value.toLowerCase().trim()
@@ -58,7 +63,6 @@ async function renderSidebar() {
     else navigate("/login")
   })
 
-  // Load categories from API
   try {
     const categories = await api.get("/categories")
     const list = document.getElementById("category-list")
@@ -81,7 +85,6 @@ async function renderSidebar() {
     console.error("Failed to load categories", err)
   }
 
-  // Load stats
   try {
     const stats = await api.get("/stats")
     const statPosts = document.getElementById("stat-posts")
@@ -97,6 +100,10 @@ function matchRoute(path) {
   if (path.startsWith("/post/")) {
     const id = path.split("/")[2]
     return () => renderPost(id)
+  }
+  if (path.startsWith("/edit-post/")) {
+    const id = path.split("/")[2]
+    return () => renderEditPost(id)
   }
   return null
 }

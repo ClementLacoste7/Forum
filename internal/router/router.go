@@ -38,6 +38,7 @@ func New(db *gorm.DB) http.Handler {
 	mux.HandleFunc("/api/auth/refresh", h.Refresh)
 	mux.HandleFunc("/api/auth/forgot-password", h.ForgotPassword)
 	mux.HandleFunc("/api/auth/reset-password", h.ResetPassword)
+	mux.HandleFunc("/api/auth/logout", h.Logout)
 
 	// Categories (public)
 	mux.HandleFunc("/api/categories", h.GetCategories)
