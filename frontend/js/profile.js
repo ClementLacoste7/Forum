@@ -1,92 +1,104 @@
-export async function renderEditPost(id) {
-  if (!localStorage.getItem("access_token")) return navigate("/login")
+import { api } from "./api.js"
+import { navigate } from "./router.js"
 
-  let post, categories
-  try {
-    [post, categories] = await Promise.all([
-      api.get(`/posts/${id}`),
-      api.get("/categories")
-    ])
-  } catch (err) {
-    document.getElementById("main-content").innerHTML = "<p>Failed to load post.</p>"
-    return
-  }
+export async function renderProfile() {
+  const token = localStorage.getItem("access_token")
+  if (!token) return navigate("/login")
 
   document.getElementById("main-content").innerHTML = `
-    <div class="new-post-form">
-      <h2>Edit Post</h2>
-      <div id="post-error" class="error-msg"></div>
-      <input id="post-title" type="text" value="${post.Title}" placeholder="Post title *" />
-      <div class="categories-select">
-        <p class="categories-label">Categories *</p>
-        <div class="categories-checkboxes">
-          ${categories.map(c => `
-            <label class="category-checkbox">
-              <input type="checkbox" value="${c.Name}"
-                ${post.Categories?.some(pc => pc.Name === c.Name) ? "checked" : ""} />
-              ${c.Name}
-            </label>
-          `).join("")}
-        </div>
-      </div>
-      <div id="editor-container"></div>
-      <div class="image-upload-box">
-        ${post.ImagePath ? `<img src="${post.ImagePath}" class="image-preview-img" id="current-image" />` : ""}
-        <label class="image-upload-label">
-          Replace image (optional)
-          <input type="file" id="post-image" accept=".png,.jpg,.jpeg,.gif" />
-        </label>
-        <div id="image-preview"></div>
-      </div>
-      <button class="btn-primary" id="post-submit">Save changes</button>
-      <button class="btn-back" id="cancel-btn">Cancel</button>
+    <div class="profile-container">
+      <h2>My Profile</h2>
+      <div id="profile-error" class="error-msg"></div>
+      <div id="profile-data">Loading...</div>
     </div>
   `
 
-  const editor = initEditor("editor-container")
-  editor.root.innerHTML = post.Content
+  try {
+    const data = await api.get("/profile")
+    renderProfileData(data)
+  } catch (err) {
+    document.getElementById("profile-data").innerHTML = "<p>Failed to load profile.</p>"
+  }
+}
 
-  document.getElementById("post-image").addEventListener("change", (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    document.getElementById("image-preview").innerHTML = `<img src="${url}" class="image-preview-img" />`
-    const current = document.getElementById("current-image")
-    if (current) current.style.display = "none"
+async function renderProfileData(data) {
+  document.getElementById("profile-data").innerHTML = `
+    <div class="profile-info">
+      <p><strong>Username:</strong> ${data.user.Username}</p>
+      <p><strong>Email:</strong> ${data.user.Email}</p>
+    </div>
+
+    <h3>My Posts (${data.posts?.length || 0})</h3>
+    <ul class="profile-list" id="profile-posts">
+      ${data.posts?.length ? data.posts.map(p => `
+        <li class="profile-list-item">
+          <span class="profile-post-title" data-id="${p.ID}">${p.Title}</span>
+          <div class="profile-post-actions">
+            <button class="btn-edit-post" data-id="${p.ID}">Edit</button>
+            <button class="btn-delete-post" data-id="${p.ID}">Delete</button>
+          </div>
+        </li>
+      `).join("") : "<li>No posts yet.</li>"}
+    </ul>
+
+    <h3>My Comments (${data.comments?.length || 0})</h3>
+    <ul class="profile-list">
+      ${data.comments?.length ? data.comments.map(c => `
+        <li class="profile-list-item">${c.Content}</li>
+      `).join("") : "<li>No comments yet.</li>"}
+    </ul>
+
+    <h3>My Likes (${data.likes?.length || 0})</h3>
+    <ul class="profile-list">
+      ${data.likes?.length ? data.likes.map(l => `
+        <li class="profile-list-item">${l.IsLike ? "Like" : "Dislike"} — Post #${l.PostID}</li>
+      `).join("") : "<li>No likes yet.</li>"}
+    </ul>
+
+    <button id="logout-btn">Sign out</button>
+  `
+
+  document.querySelectorAll(".profile-post-title").forEach(el => {
+    el.addEventListener("click", () => navigate(`/post/${el.dataset.id}`))
   })
 
-  document.getElementById("cancel-btn").addEventListener("click", () => navigate("/profile"))
+  document.querySelectorAll(".btn-edit-post").forEach(btn => {
+    btn.addEventListener("click", () => navigate(`/edit-post/${btn.dataset.id}`))
+  })
 
-  document.getElementById("post-submit").addEventListener("click", async () => {
-    const title = document.getElementById("post-title").value.trim()
-    const content = getEditorContent()
-    const selected = [...document.querySelectorAll(".categories-checkboxes input:checked")]
-      .map(el => el.value)
-    const imageFile = document.getElementById("post-image").files[0]
-    const errorEl = document.getElementById("post-error")
-    errorEl.textContent = ""
+  document.querySelectorAll(".btn-delete-post").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const li = btn.closest("li")
+      li.innerHTML = `
+        <span>Confirm deletion?</span>
+        <button class="btn-confirm-delete" data-id="${btn.dataset.id}">Yes</button>
+        <button class="btn-cancel-delete">Cancel</button>
+      `
 
-    if (!title) { errorEl.textContent = "Title is required."; return }
-    if (!content.trim()) { errorEl.textContent = "Content is required."; return }
-    if (!selected.length) { errorEl.textContent = "Select at least one category."; return }
-
-    const formData = new FormData()
-    formData.append("title", title)
-    formData.append("content", content)
-    selected.forEach(cat => formData.append("categories", cat))
-    if (imageFile) formData.append("image", imageFile)
-
-    try {
-      const token = localStorage.getItem("access_token")
-      const res = await fetch(`/api/posts/${id}`, {
-        method: "PUT",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData,
+      li.querySelector(".btn-cancel-delete").addEventListener("click", async () => {
+        const data = await api.get("/profile")
+        renderProfileData(data)
       })
-      if (!res.ok) throw new Error(await res.text())
-      navigate("/profile")
-    } catch (err) {
-      errorEl.textContent = err.message || "An error occurred."
-    }
+
+      li.querySelector(".btn-confirm-delete").addEventListener("click", async () => {
+        try {
+          await api.delete(`/posts/${btn.dataset.id}`)
+          const data = await api.get("/profile")
+          renderProfileData(data)
+        } catch (err) {
+          document.getElementById("profile-error").textContent = "Failed to delete post."
+        }
+      })
+    })
+  })
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    const refreshToken = localStorage.getItem("refresh_token")
+    try {
+      await api.post("/auth/logout", { refresh_token: refreshToken })
+    } catch {}
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("refresh_token")
+    navigate("/")
   })
 }
