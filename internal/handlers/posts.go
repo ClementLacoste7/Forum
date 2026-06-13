@@ -16,7 +16,7 @@ import (
 
 func (h *Handler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	posts := []models.Post{}
-	h.DB.Preload("User").Preload("Categories").Preload("Comments").Find(&posts)
+	h.DB.Preload("User").Preload("Categories").Preload("Comments").Preload("Likes").Find(&posts)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
@@ -43,7 +43,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	for _, name := range categoryNames {
 		var cat models.Category
 		if err := h.DB.Where("name = ?", name).First(&cat).Error; err != nil {
-			http.Error(w, "categorie invalide: "+name, http.StatusBadRequest)
+			http.Error(w, "invalid category: "+name, http.StatusBadRequest)
 			return
 		}
 		categories = append(categories, cat)
@@ -57,13 +57,13 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		ext := filepath.Ext(header.Filename)
 		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true}
 		if !allowed[strings.ToLower(ext)] {
-			http.Error(w, "format d'image invalide", http.StatusBadRequest)
+			http.Error(w, "invalid image format", http.StatusBadRequest)
 			return
 		}
 		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 		dst, err := os.Create("uploads/" + filename)
 		if err != nil {
-			http.Error(w, "erreur sauvegarde image", http.StatusInternalServerError)
+			http.Error(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
 		defer dst.Close()
@@ -102,37 +102,71 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := strings.TrimPrefix(r.URL.Path, "/api/posts/")
+	idStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/posts/"))
 	var post models.Post
-	if err := h.DB.First(&post, id).Error; err != nil {
+	if err := h.DB.Preload("Categories").Where("id = ?", idStr).First(&post).Error; err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+
+	// Only the author can edit
 	if post.UserID != userID {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
-	var body struct {
-		Title      string   `json:"title"`
-		Content    string   `json:"content"`
-		Categories []string `json:"categories"`
+	// Parse multipart form (max 20MB)
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
 	}
-	json.NewDecoder(r.Body).Decode(&body)
+
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	categoryNames := r.Form["categories"]
 
 	// Only allow existing categories
 	var categories []models.Category
-	for _, name := range body.Categories {
+	for _, name := range categoryNames {
 		var cat models.Category
 		if err := h.DB.Where("name = ?", name).First(&cat).Error; err != nil {
-			http.Error(w, "categorie invalide: "+name, http.StatusBadRequest)
+			http.Error(w, "invalid category: "+name, http.StatusBadRequest)
 			return
 		}
 		categories = append(categories, cat)
 	}
 
+	// Handle new image upload if provided
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		ext := filepath.Ext(header.Filename)
+		allowed := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true}
+		if !allowed[strings.ToLower(ext)] {
+			http.Error(w, "invalid image format", http.StatusBadRequest)
+			return
+		}
+		// Delete old image if exists
+		if post.ImagePath != "" {
+			os.Remove("." + post.ImagePath)
+		}
+		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+		dst, err := os.Create("uploads/" + filename)
+		if err != nil {
+			http.Error(w, "failed to save image", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+		io.Copy(dst, file)
+		post.ImagePath = "/uploads/" + filename
+	}
+
 	h.DB.Model(&post).Association("Categories").Replace(categories)
-	h.DB.Model(&post).Updates(models.Post{Title: body.Title, Content: body.Content})
+	h.DB.Model(&post).Updates(map[string]interface{}{
+		"title":      title,
+		"content":    content,
+		"image_path": post.ImagePath,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
@@ -146,7 +180,6 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/posts/"))
-
 	var post models.Post
 	if err := h.DB.Where("id = ?", idStr).First(&post).Error; err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -159,6 +192,11 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Delete image file if exists
+	if post.ImagePath != "" {
+		os.Remove("." + post.ImagePath)
+	}
+
 	h.DB.Delete(&post)
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -168,8 +206,8 @@ func (h *Handler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	h.DB.Find(&categories)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(categories)
-
 }
+
 func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
 	var postCount int64
 	var memberCount int64
