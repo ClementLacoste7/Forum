@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"forum/internal/middleware"
 	"forum/internal/models"
@@ -25,12 +26,31 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate required fields
+	body.Content = strings.TrimSpace(body.Content)
+	if body.Content == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
+		return
+	}
+	if body.PostID == 0 {
+		http.Error(w, "post_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check post exists
+	var post models.Post
+	if err := h.DB.First(&post, body.PostID).Error; err != nil {
+		http.Error(w, "post not found", http.StatusNotFound)
+		return
+	}
+
 	comment := models.Comment{Content: body.Content, UserID: userID, PostID: body.PostID}
 	h.DB.Create(&comment)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(comment)
 }
+
 func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 	postID := r.URL.Query().Get("post_id")
 	if postID == "" {
@@ -56,6 +76,12 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate comment ID
+	if body.CommentID == 0 {
+		http.Error(w, "comment_id is required", http.StatusBadRequest)
 		return
 	}
 
