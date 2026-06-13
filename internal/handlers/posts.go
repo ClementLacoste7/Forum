@@ -34,9 +34,23 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := r.FormValue("title")
-	content := r.FormValue("content")
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := strings.TrimSpace(r.FormValue("content"))
 	categoryNames := r.Form["categories"]
+
+	// Validate required fields
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	if content == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
+		return
+	}
+	if len(categoryNames) == 0 {
+		http.Error(w, "at least one category is required", http.StatusBadRequest)
+		return
+	}
 
 	// Only allow existing categories
 	var categories []models.Category
@@ -121,9 +135,23 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := r.FormValue("title")
-	content := r.FormValue("content")
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := strings.TrimSpace(r.FormValue("content"))
 	categoryNames := r.Form["categories"]
+
+	// Validate required fields
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	if content == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
+		return
+	}
+	if len(categoryNames) == 0 {
+		http.Error(w, "at least one category is required", http.StatusBadRequest)
+		return
+	}
 
 	// Only allow existing categories
 	var categories []models.Category
