@@ -27,10 +27,15 @@ func getEnv(key, fallback string) string {
 func Load() *Config {
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
 
+	port := getEnv("PORT", "8081")
+	if port != "" && port[0] != ':' {
+		port = ":" + port
+	}
+
 	return &Config{
-		Port:         getEnv("PORT", ":8081"),
+		Port:         port,
 		DatabasePath: getEnv("DATABASE_PATH", "./forum.db"),
-		JWTSecret:    getEnv("JWT_SECRET", "a-changer-en-prod-ilyas-stp"),
+		JWTSecret:    getEnv("JWT_SECRET", "prod-changer"),
 		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:     smtpPort,
 		SMTPUser:     getEnv("SMTP_USER", ""),
