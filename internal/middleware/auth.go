@@ -37,7 +37,7 @@ func extractUserID(r *http.Request) (uint, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, http.ErrNoCookie
 		}
-		return []byte("change-me-in-production"), nil
+		return []byte("prod-changer"), nil
 	})
 	if err != nil || !token.Valid {
 		return 0, err
